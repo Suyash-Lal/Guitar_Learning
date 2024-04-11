@@ -7,48 +7,61 @@ public class OutputAudioRecorder : MonoBehaviour
 {
     internal string FILENAME;
     private int outputRate;
-    private int headerSize = 44; //default for uncompressed wav
-    private String fileName;
+    private int headerSize = 44; // Default for uncompressed wav
+    private string fileName;
     private bool recOutput = false;
     private FileStream fileStream;
-    float[] tempDataSource;
-    public Button StartBTN;
+    private bool isInsideTrigger = false; // Track if inside trigger area
 
     void Awake()
     {
         outputRate = AudioSettings.outputSampleRate;
     }
 
-    public void StartRecording()
+    void Update()
     {
-        FILENAME = "record " + UnityEngine.Random.Range(1,1000);
-        fileName = Path.GetFileNameWithoutExtension(FILENAME) + ".wav";
+        // Toggle recording on 'E' key press if inside trigger area
+        if (isInsideTrigger && Input.GetKeyDown(KeyCode.E))
+        {
+            ToggleRecording();
+        }
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        isInsideTrigger = true; // Set flag to true when entering trigger area
+        Debug.Log("in area");
+    }
+
+    void OnTriggerExit(Collider other)
+    {
+        isInsideTrigger = false; // Reset flag when exiting trigger area
+        Debug.Log("out area");
+    }
+
+    private void ToggleRecording()
+    {
         if (!recOutput)
         {
+            FILENAME = "record " + UnityEngine.Random.Range(1, 1000).ToString();
+            fileName = Path.GetFileNameWithoutExtension(FILENAME) + ".wav";
             StartWriting(fileName);
             recOutput = true;
-            StartBTN.image.color = Color.red;
             Debug.Log("Start Recording");
         }
         else
         {
-            Debug.Log("Recording is in progress already");
+            recOutput = false;
+            WriteHeader();
+            Debug.Log("Stop Recording");
         }
     }
 
-    public void StopRecording()
-    {
-        recOutput = false;
-        WriteHeader();
-        StartBTN.image.color = Color.white;
-        Debug.Log("Stop Recording");
-    }
-
-    private void StartWriting(String name)
+    private void StartWriting(string name)
     {
         fileStream = new FileStream(Application.persistentDataPath + "/" + name, FileMode.Create);
-        var emptyByte = new byte();
-        for (int i = 0; i < headerSize; i++) //preparing the header
+        byte emptyByte = new byte();
+        for (int i = 0; i < headerSize; i++) // Preparing the header
         {
             fileStream.WriteByte(emptyByte);
         }
@@ -58,63 +71,57 @@ public class OutputAudioRecorder : MonoBehaviour
     {
         if (recOutput)
         {
-            ConvertAndWrite(data); //audio data is interlaced
+            ConvertAndWrite(data); // Audio data is interlaced
         }
-    }
-
-    private void ConvertAndWrite(float[] dataSource)
-    {
-        var intData = new Int16[dataSource.Length];
-        //converting in 2 steps : float[] to Int16[], //then Int16[] to Byte[]
-        var bytesData = new Byte[dataSource.Length * 2];
-        //bytesData array is twice the size of
-        //dataSource array because a float converted in Int16 is 2 bytes.
-        var rescaleFactor = 32767; //to convert float to Int16
-        for (var i = 0; i < dataSource.Length; i++)
-        {
-            intData[i] = (Int16)(dataSource[i] * rescaleFactor);
-            var byteArr = new Byte[2];
-            byteArr = BitConverter.GetBytes(intData[i]);
-            byteArr.CopyTo(bytesData, i * 2);
-        }
-        fileStream.Write(bytesData, 0, bytesData.Length);
-        tempDataSource = new float[dataSource.Length];
-        tempDataSource = dataSource;
     }
 
     private void WriteHeader()
     {
         fileStream.Seek(0, SeekOrigin.Begin);
-        var riff = System.Text.Encoding.UTF8.GetBytes("RIFF");
+        byte[] riff = System.Text.Encoding.UTF8.GetBytes("RIFF");
         fileStream.Write(riff, 0, 4);
-        var chunkSize = BitConverter.GetBytes(fileStream.Length - 8);
+        byte[] chunkSize = BitConverter.GetBytes(fileStream.Length - 8);
         fileStream.Write(chunkSize, 0, 4);
-        var wave = System.Text.Encoding.UTF8.GetBytes("WAVE");
+        byte[] wave = System.Text.Encoding.UTF8.GetBytes("WAVE");
         fileStream.Write(wave, 0, 4);
-        var fmt = System.Text.Encoding.UTF8.GetBytes("fmt ");
+        byte[] fmt = System.Text.Encoding.UTF8.GetBytes("fmt ");
         fileStream.Write(fmt, 0, 4);
-        var subChunk1 = BitConverter.GetBytes(16);
+        byte[] subChunk1 = BitConverter.GetBytes(16);
         fileStream.Write(subChunk1, 0, 4);
-        UInt16 two = 2;
-        UInt16 one = 1;
-        var audioFormat = BitConverter.GetBytes(one);
+        ushort two = 2;
+        ushort one = 1;
+        byte[] audioFormat = BitConverter.GetBytes(one);
         fileStream.Write(audioFormat, 0, 2);
-        var numChannels = BitConverter.GetBytes(two);
+        byte[] numChannels = BitConverter.GetBytes(two);
         fileStream.Write(numChannels, 0, 2);
-        var sampleRate = BitConverter.GetBytes(outputRate);
+        byte[] sampleRate = BitConverter.GetBytes(outputRate);
         fileStream.Write(sampleRate, 0, 4);
-        var byteRate = BitConverter.GetBytes(outputRate * 4);
+        byte[] byteRate = BitConverter.GetBytes(outputRate * 4); // SampleRate * BytesPerSample*Channels
         fileStream.Write(byteRate, 0, 4);
-        UInt16 four = 4;
-        var blockAlign = BitConverter.GetBytes(four);
+        ushort four = 4;
+        byte[] blockAlign = BitConverter.GetBytes(four);
         fileStream.Write(blockAlign, 0, 2);
-        UInt16 sixteen = 16;
-        var bitsPerSample = BitConverter.GetBytes(sixteen);
+        ushort sixteen = 16;
+        byte[] bitsPerSample = BitConverter.GetBytes(sixteen);
         fileStream.Write(bitsPerSample, 0, 2);
-        var dataString = System.Text.Encoding.UTF8.GetBytes("data");
+        byte[] dataString = System.Text.Encoding.UTF8.GetBytes("data");
         fileStream.Write(dataString, 0, 4);
-        var subChunk2 = BitConverter.GetBytes(fileStream.Length - headerSize);
+        byte[] subChunk2 = BitConverter.GetBytes(fileStream.Length - headerSize);
         fileStream.Write(subChunk2, 0, 4);
         fileStream.Close();
+    }
+
+    private void ConvertAndWrite(float[] dataSource)
+    {
+        Int16[] intData = new Int16[dataSource.Length];
+        Byte[] bytesData = new Byte[dataSource.Length * 2]; // Each Int16 takes 2 bytes
+        int rescaleFactor = 32767; // to convert float to Int16
+        for (int i = 0; i < dataSource.Length; i++)
+        {
+            intData[i] = (Int16)(dataSource[i] * rescaleFactor);
+            Byte[] byteArr = BitConverter.GetBytes(intData[i]);
+            byteArr.CopyTo(bytesData, i * 2);
+        }
+        fileStream.Write(bytesData, 0, bytesData.Length);
     }
 }
