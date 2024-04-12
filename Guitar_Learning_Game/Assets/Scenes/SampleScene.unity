@@ -801,6 +801,7 @@ GameObject:
   - component: {fileID: 1775239288}
   - component: {fileID: 1775239287}
   - component: {fileID: 1775239291}
+  - component: {fileID: 1775239292}
   m_Layer: 0
   m_Name: Drummer
   m_TagString: Untagged
@@ -944,7 +945,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   saveFolderPath: Assets/Scripts/Player_Recordings
-  audioRecorder: {fileID: 1775239291}
+--- !u!81 &1775239292
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1775239286}
+  m_Enabled: 1
 --- !u!1 &1836116920
 GameObject:
   m_ObjectHideFlags: 0
