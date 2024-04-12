@@ -12,7 +12,15 @@ public class OutputAudioRecorder : MonoBehaviour
     private bool recOutput = false;
     private FileStream fileStream;
     private bool isInsideTrigger = false; // Track if inside trigger area
-
+    public string saveFolderPath;
+    public OutputAudioRecorder audioRecorder;
+    private bool isRecording = false;
+    
+    void Start()
+{
+    // Assuming audioRecorder is already assigned via the Inspector or another method
+    audioRecorder.saveFolderPath = "Assets/Scripts/Player_Recordings";
+}
     void Awake()
     {
         outputRate = AudioSettings.outputSampleRate;
@@ -24,25 +32,43 @@ public class OutputAudioRecorder : MonoBehaviour
         if (isInsideTrigger && Input.GetKeyDown(KeyCode.E))
         {
             ToggleRecording();
+            isRecording = true;
+        }
+        else
+        {
+            isRecording = false;
         }
     }
 
-    void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter2D(Collider2D other)
     {
-        isInsideTrigger = true; // Set flag to true when entering trigger area
-        Debug.Log("in area");
+        if (other.CompareTag("Player"))
+        { 
+            isInsideTrigger = true; // Set flag to true when entering trigger area
+            // Debug.Log("in area");
+        }
     }
 
-    void OnTriggerExit(Collider other)
+    private void OnTriggerExit2D(Collider2D other)
     {
-        isInsideTrigger = false; // Reset flag when exiting trigger area
-        Debug.Log("out area");
+        if (other.CompareTag("Player"))
+        {
+            isInsideTrigger = false; // Set flag to true when entering trigger area
+            // Debug.Log("out area");
+        }
     }
 
     private void ToggleRecording()
     {
         if (!recOutput)
         {
+            // Gets the first microphone in device list
+            string microphoneName = Microphone.devices[0];
+            if (isRecording == true)
+            {
+                Microphone.Start(microphoneName, true, 10, outputRate);
+            }
+
             FILENAME = "record " + UnityEngine.Random.Range(1, 1000).ToString();
             fileName = Path.GetFileNameWithoutExtension(FILENAME) + ".wav";
             StartWriting(fileName);
@@ -58,6 +84,27 @@ public class OutputAudioRecorder : MonoBehaviour
     }
 
     private void StartWriting(string name)
+{
+    // Check if a custom save folder path has been provided, otherwise use the default path
+    string finalPath = string.IsNullOrEmpty(saveFolderPath) ? Application.persistentDataPath : saveFolderPath;
+
+    // Ensure the directory exists
+    if (!Directory.Exists(finalPath))
+    {
+        Directory.CreateDirectory(finalPath);
+    }
+
+    string filePath = Path.Combine(finalPath, name);
+
+    fileStream = new FileStream(filePath, FileMode.Create);
+    byte emptyByte = new byte();
+    for (int i = 0; i < headerSize; i++) // Preparing the header
+    {
+        fileStream.WriteByte(emptyByte);
+    }
+}
+/*
+    private void StartWriting(string name)
     {
         fileStream = new FileStream(Application.persistentDataPath + "/" + name, FileMode.Create);
         byte emptyByte = new byte();
@@ -66,7 +113,7 @@ public class OutputAudioRecorder : MonoBehaviour
             fileStream.WriteByte(emptyByte);
         }
     }
-
+*/
     private void OnAudioFilterRead(float[] data, int channels)
     {
         if (recOutput)
