@@ -209,7 +209,7 @@ def find_closest_guitar_note(frequency):
 
 
 
-def main(audioFileName="OpenE.wav", w_len=1024, w_step=256, f0_min=70, f0_max=700, harmo_thresh=0.85, audioDir="./", dataFileName=None, verbose=4):
+def main(audioFileName="Suyash_OpenLowE.wav", w_len=1024, w_step=256, f0_min=70, f0_max=700, harmo_thresh=0.85, audioDir="./", dataFileName=None, verbose=4):
     """
     Run the computation of the Yin algorithm on a example file.
 
