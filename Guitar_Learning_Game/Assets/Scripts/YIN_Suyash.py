@@ -92,7 +92,7 @@ def cumulativeMeanNormalizedDifferenceFunction(df, N):
     :rtype: list
     """
 
-    cmndf = df[1:] * range(1, N) / np.cumsum(df[1:]).astype(float) #scipy method
+    cmndf = df[1:] * range(1, N) / (np.cumsum(df[1:]).astype(float) + 1e-10)  # scipy method
     return np.insert(cmndf, 0, 1)
 
 
@@ -209,7 +209,7 @@ def find_closest_guitar_note(frequency):
 
 
 
-def main(audioFileName="Player_Recordings/recording_20240413181342201.wav", w_len=1024, w_step=256, f0_min=70, f0_max=700, harmo_thresh=0.85, audioDir="./", dataFileName=None, verbose=4):
+def main(audioFileName="OpenE.wav", w_len=1024, w_step=256, f0_min=70, f0_max=700, harmo_thresh=0.85, audioDir="./", dataFileName=None, verbose=4):
     """
     Run the computation of the Yin algorithm on a example file.
 
@@ -258,11 +258,6 @@ def main(audioFileName="Player_Recordings/recording_20240413181342201.wav", w_le
     average_frequency = calculate_average_frequency(pitches)
     closest_note, closest_frequency = find_closest_guitar_note(average_frequency)
     print(f"The closest guitar note to the average frequency {average_frequency} Hz is {closest_note} ({closest_frequency} Hz).")
-    return closest_note
-
-
-'''
-    GRAPH REPRESENTATION:
 
     if verbose >3:
         ax4 = plt.subplot(4,1,2)
@@ -271,7 +266,8 @@ def main(audioFileName="Player_Recordings/recording_20240413181342201.wav", w_le
         ax4.set_ylabel('Frequency (Hz)')
         ax4.set_xlabel('Time (seconds)')
         plt.show()
-'''
+
+    return closest_note
 
 if __name__ == '__main__':
     main()
