@@ -71,7 +71,7 @@ public class OutputAudioRecorder : MonoBehaviour
         if (recordingClip == null) return;
 
         // Path to save the recording with DateTime format including milliseconds
-        string fileName = $"recording_{DateTime.Now:yyyyMMddHHmmssfff}.wav";
+        string fileName = $"recording0.wav";
         string path = Path.Combine(saveFolderPath, fileName);
         
         // Create the file
