@@ -8,6 +8,7 @@ import os
 from os import sep
 from audio_processing import *
 import time
+from scipy import stats
 
 def differenceFunction_original(x, N, tau_max):
     """
@@ -120,7 +121,7 @@ def getPitch(cmdf, tau_min, tau_max, harmo_th=0.1):
 
 
 
-def compute_yin(sig, sr, dataFileName=None, w_len=512, w_step=256, f0_min=100, f0_max=700, harmo_thresh=0.1):
+def compute_yin(sig, sr, dataFileName=r"C:\GitHub Repos\Thesis-Guitar_Project\Guitar_Learning\Guitar_Learning_Game\Assets\Scripts\Player_Recordings\recording0.wav", w_len=512, w_step=256, f0_min=80, f0_max=500, harmo_thresh=0.1):
     """
 
     Compute the Yin Algorithm. Return fundamental frequency and harmonic rate.
@@ -177,36 +178,64 @@ def compute_yin(sig, sr, dataFileName=None, w_len=512, w_step=256, f0_min=100, f
 
     return pitches, harmonic_rates, argmins, times
 
-def calculate_average_frequency(pitches):
-    """Calculate the average frequency from detected pitches, excluding zeros (unvoiced segments)."""
-    non_zero_pitches = [pitch for pitch in pitches if pitch > 0]
-    if non_zero_pitches:
-        return sum(non_zero_pitches) / len(non_zero_pitches)
+def calculate_average_frequency(pitches, times):
+    """Calculate the most dominant (longest played) frequency from detected pitches, excluding zeros (unvoiced segments)."""
+    assert len(pitches) == len(times), "The lengths of pitches and times should be the same."
+
+    # Dictionary to hold the cumulative duration of each frequency
+    frequency_durations = {}
+
+    # Process each pitch with its corresponding time
+    for i in range(1, len(pitches)):
+        if pitches[i] > 0:  # Exclude zero values
+            # Calculate the duration for which this pitch was held
+            duration = times[i] - times[i-1]
+
+            # If the pitch is already in the dictionary, add the duration, else set it
+            if pitches[i] in frequency_durations:
+                frequency_durations[pitches[i]] += duration
+            else:
+                frequency_durations[pitches[i]] = duration
+
+    # Find the frequency with the maximum cumulative duration
+    if frequency_durations:
+        longest_played_frequency = max(frequency_durations, key=frequency_durations.get)
+        return longest_played_frequency
     else:
         return 0
 
+
 def find_closest_guitar_note(frequency):
     # Define the notes and their frequencies in one octave
-    notes = ['E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E (next octave)']
-    frequencies = [82, 87, 93, 98, 104, 110, 117, 124, 131, 139, 147, 156, 165]
+    base_notes = ['E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E (next octave)']
+    base_frequencies = [82, 87, 93, 98, 104, 110, 117, 124, 131, 139, 147, 156, 165]
 
-    # This method avoids an infinite loop by ensuring the loop condition will eventually fail
-    octave = 1
-    while True:
-        octave *= 2
-        new_frequencies = [f * octave for f in frequencies[:12]]  # Skip the last note to avoid duplication
-        if new_frequencies[0] > 250:
-            break
-        frequencies.extend(new_frequencies)
-        notes.extend(notes[:12])
+    # Lists to hold extended frequencies and notes
+    extended_frequencies = []
+    extended_notes = []
+
+    # Generate frequencies and notes for multiple octaves
+    for octave in range(5):  # This example extends up to the fifth octave
+        new_frequencies = [f * (2 ** octave) for f in base_frequencies]
+        extended_frequencies.extend(new_frequencies)
+        if octave < 4:
+            extended_notes.extend(base_notes)
+        else:
+            # Avoid duplicating the last E note in the final octave expansion
+            extended_notes.extend(base_notes[:-1])
 
     # Find the closest frequency
-    closest_freq = min(frequencies, key=lambda x: abs(x - frequency))
-    note_index = frequencies.index(closest_freq)
-    return notes[note_index % 12], closest_freq
+    closest_freq = min(extended_frequencies, key=lambda x: abs(x - frequency))
+    note_index = extended_frequencies.index(closest_freq)
+    return extended_notes[note_index], closest_freq  # Return the closest note and its frequency
 
+def write_closest_note_to_file(frequency, file_path):
+    closest_note, closest_frequency = find_closest_guitar_note(frequency)
+    with open(file_path, 'w') as file:
+        # file.write(f"The closest guitar note to {frequency} Hz is {closest_note} ({closest_frequency} Hz).\n")
+        file.write(closest_note)
 
-def main(audioFileName="Player_Recordings/recording0.wav", w_len=1024, w_step=256, f0_min=70, f0_max=700, harmo_thresh=0.85, audioDir="./", dataFileName=None, verbose=4):
+def main(audioFileName = r"C:\GitHub Repos\Thesis-Guitar_Project\Guitar_Learning\Guitar_Learning_Game\Assets\Scripts\Player_Recordings\recording0.wav", w_len=1024, w_step=256, f0_min=80, f0_max=500, harmo_thresh=0.83, audioDir="./", dataFileName=None, verbose=4):
     """
     Run the computation of the Yin algorithm on a example file.
 
@@ -231,7 +260,7 @@ def main(audioFileName="Player_Recordings/recording0.wav", w_len=1024, w_step=25
     :param verbose: Outputs on the console : 0-> nothing, 1-> warning, 2 -> info, 3-> debug(all info), 4 -> plot + all info
     :type verbose: int
     """
-
+    
     if audioDir is not None:
         audioFilePath = audioDir + sep + audioFileName
     else:
@@ -240,6 +269,9 @@ def main(audioFileName="Player_Recordings/recording0.wav", w_len=1024, w_step=25
     audioFilePath = os.path.join(audioDir, audioFileName)
 
     sr, sig = audio_read(audioFilePath, formatsox=False)
+
+    timeScale = range(0, len(sig) - w_len, w_step)  # time values for each analysis window
+    times = [t/float(sr) for t in timeScale]
 
     start = time.time()
     pitches, harmonic_rates, argmins, times = compute_yin(sig, sr, dataFileName, w_len, w_step, f0_min, f0_max, harmo_thresh)
@@ -250,11 +282,14 @@ def main(audioFileName="Player_Recordings/recording0.wav", w_len=1024, w_step=25
 
     
     # After computing the yin pitches
-    average_frequency = calculate_average_frequency(pitches)
+    average_frequency = calculate_average_frequency(pitches, times)
     print("Average Frequency:", average_frequency)
-    average_frequency = calculate_average_frequency(pitches)
     closest_note, closest_frequency = find_closest_guitar_note(average_frequency)
     print(f"The closest guitar note to the average frequency {average_frequency} Hz is {closest_note} ({closest_frequency} Hz).")
+
+    # Write closest note to a text file
+    output_file_path = os.path.join(audioDir, r"C:\GitHub Repos\Thesis-Guitar_Project\Guitar_Learning\Guitar_Learning_Game\Assets\Scripts\closest_note.txt")  # You can specify a different path if needed
+    write_closest_note_to_file(average_frequency, output_file_path)
 
     if verbose >3:
         ax4 = plt.subplot(4,1,2)

@@ -178,7 +178,7 @@ public class OutputAudioRecorder : MonoBehaviour
         if (other.CompareTag("Player"))
         { 
             isInsideTrigger = true; // Set flag to true when entering trigger area
-            Debug.Log("Player entered trigger area.");
+            // Debug.Log("Player entered trigger area.");
         }
     }
 
@@ -187,7 +187,7 @@ public class OutputAudioRecorder : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             isInsideTrigger = false; // Set flag to false when exiting trigger area
-            Debug.Log("Player left trigger area.");
+            // Debug.Log("Player left trigger area.");
         }
     }
 }
