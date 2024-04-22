@@ -235,7 +235,7 @@ def write_closest_note_to_file(frequency, file_path):
         # file.write(f"The closest guitar note to {frequency} Hz is {closest_note} ({closest_frequency} Hz).\n")
         file.write(closest_note)
 
-def main(audioFileName = r"C:\GitHub Repos\Thesis-Guitar_Project\Guitar_Learning\Guitar_Learning_Game\Assets\Scripts\Player_Recordings\recording0.wav", w_len=1024, w_step=256, f0_min=80, f0_max=500, harmo_thresh=0.83, audioDir="./", dataFileName=None, verbose=4):
+def main(audioFileName = r"C:\GitHub Repos\Thesis-Guitar_Project\Guitar_Learning\Guitar_Learning_Game\Assets\Scripts\OpenA.wav", w_len=1024, w_step=256, f0_min=80, f0_max=500, harmo_thresh=0.83, audioDir="./", dataFileName=None, verbose=4):
     """
     Run the computation of the Yin algorithm on a example file.
 
